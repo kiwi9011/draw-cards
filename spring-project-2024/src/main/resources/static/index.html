@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽卡遊戲</title>
+    <style>
+        body {
+            background: url('https://png.pngtree.com/thumb_back/fh260/background/20230927/pngtree-pink-green-blue-pastel-gradient-page-border-image_13369510.jpg') no-repeat center center fixed;
+            background-size: cover; /* 使背景图像覆盖整个背景 */
+            color: #333;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #gold {
+            font-size: 20px;
+            margin: 20px 0;
+        }
+        #result {
+            white-space: pre-line;
+            margin-top: 20px;
+        }
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .card {
+            margin: 10px;
+            text-align: center; /* 让文字居中对齐 */
+        }
+        .card-image {
+            width: 100px; /* 统一大小 */
+            height: 140px; /* 统一大小 */
+            display: block;
+        }
+        #loginForm {
+            display: none;
+            margin-bottom: 20px;
+        }
+        .tab {
+            cursor: pointer;
+            padding: 10px;
+            border: 1px solid #4CAF50;
+            border-radius: 5px;
+            margin: 0 5px;
+            background-color: white;
+            transition: background-color 0.3s;
+        }
+        .tab:hover {
+            background-color: #e0e0e0;
+        }
+        .active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        #home, #gachaPage {
+            display: none;
+        }
+    </style>
+    <script>
+        let gold = 3000;
+        const costs = { single: 150, ten: 1500 };
+        const cardImages = {
+            SSR: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTondf2vyTjQGXcR2nYcWlRWnbD3ll2ZDZOhg&s",
+            SR: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThPbq5l7sZBMdCsJ98QgJ_pdpxsIV3pf3AfA&s",
+            R: "https://i.pinimg.com/originals/56/28/cd/5628cd36ac2b2beba231dbdfe6ed3d54.jpg",
+            N: "https://today-obs.line-scdn.net/0hu2-d3VFxKh0QHTmbiJlVSihLJmwjezAUMitieTdNcn84MT4YLX55fmBNJjE1f2pLMHIyLjUddC9uK2wYKQ/w644"
+        };
+
+        // 更新金币显示
+        function updateGoldDisplay() {
+            document.getElementById("gold").innerText = `黃金: ${gold}`;
+        }
+
+        // 执行抽卡请求
+        function drawGacha(isTenDraw) {
+            // 检查金币是否足够
+            if ((isTenDraw && gold < costs.ten) || (!isTenDraw && gold < costs.single)) {
+                alert("黃金不足，無法進行抽卡！");
+                return;
+            }
+            // 扣除相应的金币
+            gold -= isTenDraw ? costs.ten : costs.single;
+            updateGoldDisplay(); // 更新金币显示
+
+            // 清空结果区域
+            document.getElementById("result").innerText = '';
+            clearCardImages(); // 清空卡片图片
+
+            // 发起抽卡请求，根据是单抽或十连抽进行循环
+            const drawCount = isTenDraw ? 10 : 1;
+            for (let i = 0; i < drawCount; i++) {
+                fetchGacha();
+            }
+        }
+
+        // 使用Ajax（fetch）与后端通信
+        function fetchGacha() {
+            // 发起请求到Spring Boot的后端
+            fetch('/gacha')  // /gacha是你后端Spring Boot中定义的抽卡接口
+                .then(response => response.text()) // 解析响应文本
+                .then(data => {
+                    // 将抽卡结果显示在页面
+                    document.getElementById("result").innerText += data + '\n';
+                    // 根据抽卡结果更新卡片图片
+                    updateCardImage(data);
+                })
+                .catch(error => console.error('Error:', error)); // 错误处理
+        }
+
+        // 清空卡片图片
+        function clearCardImages() {
+            const cardContainer = document.getElementById("cardContainer");
+            cardContainer.innerHTML = ''; // 清空之前的图片
+        }
+
+        // 根据抽卡结果显示对应的卡片图片
+        function updateCardImage(result) {
+            const cardContainer = document.getElementById("cardContainer");
+            // 根据抽卡结果判断卡片类型并获取图片
+            const type = result.includes("SSR卡片") ? "SSR" :
+                         result.includes("SR卡片") ? "SR" :
+                         result.includes("R卡片") ? "R" : "N";
+            const cardDiv = document.createElement("div");
+            cardDiv.className = "card"; // 设置卡片容器类
+            
+            const img = document.createElement("img");
+            img.src = cardImages[type];  // 设置图片来源
+            img.className = "card-image"; // 设置图片样式类
+            
+            const text = document.createElement("div");
+            text.innerText = `${type}卡片`; // 显示卡片类型
+            cardDiv.appendChild(img); // 将图片添加到卡片容器
+            cardDiv.appendChild(text); // 将文字添加到卡片容器
+            cardContainer.appendChild(cardDiv); // 将卡片容器添加到页面中
+        }
+
+        // 充值金币功能
+        function recharge(amount) {
+            gold += amount;
+            updateGoldDisplay();
+            alert(`成功充值 ${amount} 黃金！`);
+        }
+
+        // 玩家登录功能
+        function login() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            // 模拟登录检查（这里可以加入实际的登录逻辑）
+            if (username && password) {
+                alert(`欢迎，${username}！您已成功登录！`);
+                document.getElementById("loginForm").style.display = 'none';
+                updateGoldDisplay();
+            } else {
+                alert("请填写用户名和密码！");
+            }
+        }
+
+        // 切换显示充值或登录表单
+        function toggleDropdown(value) {
+            const loginForm = document.getElementById("loginForm");
+            if (value === "recharge") {
+                loginForm.style.display = 'none';
+                document.getElementById("rechargeOptions").style.display = 'block';
+            } else if (value === "login") {
+                loginForm.style.display = 'block';
+                document.getElementById("rechargeOptions").style.display = 'none';
+            }
+        }
+
+        // 切换页面
+        function showPage(pageId) {
+            document.getElementById("home").style.display = 'none';
+            document.getElementById("gachaPage").style.display = 'none';
+            document.getElementById(pageId).style.display = 'block';
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
+        }
+
+        // 页面加载时更新金币显示
+        window.onload = function() {
+            updateGoldDisplay();
+            showPage('home'); // 默认显示首页
+        };
+    </script>
+</head>
+<body>
+    <h1>歡迎來到抽卡遊戲！</h1>
+    
+    <div id="home">
+        <h2>首頁</h2>
+        <p>點擊下方按鈕進入抽卡頁面。</p>
+        <button class="tab active" data-page="gachaPage" onclick="showPage('gachaPage')">進入抽卡頁面</button>
+    </div>
+    
+    <div id="gachaPage">
+        <h2>抽卡頁面</h2>
+        <p>點擊下方按鈕進行抽卡。</p>
+        <div id="gold">黃金: 3000</div>
+        <button onclick="drawGacha(false)">單抽 (150黃金)</button>
+        <button onclick="drawGacha(true)">十連抽 (1500黃金)</button>
+
+        <h2>選擇操作</h2>
+        <select onchange="toggleDropdown(this.value)">
+            <option value="">選擇</option>
+            <option value="recharge">充值黃金</option>
+            <option value="login">登錄</option>
+        </select>
+
+        <div id="rechargeOptions" style="display:none;">
+            <button onclick="recharge(1500)">充值 1500 黃金</button>
+            <button onclick="recharge(3000)">充值 3000 黃金</button>
+            <button onclick="recharge(10000)">充值 10000 黃金</button>
+        </div>
+
+        <div id="loginForm">
+            <h2>玩家登錄</h2>
+            <input type="text" id="username" placeholder="用戶名" required>
+            <input type="password" id="password" placeholder="密碼" required>
+            <button onclick="login()">登錄</button>
+        </div>
+
+        <p id="result"></p>
+        <div class="card-container" id="cardContainer"></div> <!-- 显示抽卡的卡片图片 -->
+    </div>
+</body>
+</html>
